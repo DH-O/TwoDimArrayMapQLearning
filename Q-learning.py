@@ -1,3 +1,6 @@
+# code source from https://3months.tistory.com/173
+# DHO_gym is handmade by me
+
 import os
 import datetime
 import numpy as np
