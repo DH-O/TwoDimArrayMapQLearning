@@ -1,3 +1,3 @@
 # TwoDimArrayMapQLearning
 
-Simpe Two dimension array map Q-learning
+Simpe Two dimension array map Tabular Q-learning
