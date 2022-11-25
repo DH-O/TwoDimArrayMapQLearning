@@ -70,10 +70,10 @@ class TwoDimCoordinationMap(TwoDimArrayMap):
         if self.randomGoal == True:
             self.reward_states[self.goal[0]][self.goal[1]] = -1
             
-            self.goal = np.array([np.random.randint(self.row//3, self.row), np.random.randint(0, self.col)])
+            self.goal = np.array([np.random.randint(0, self.row), np.random.randint(0, self.col)])
             while (self.maze[self.goal[0]][self.goal[1]] == 1):
-                self.goal = np.array([np.random.randint(self.row//3, self.row), np.random.randint(0, self.col)])
-            if self.goal == np.array([self.row - 1,0]):
+                self.goal = np.array([np.random.randint(0, self.row), np.random.randint(0, self.col)])
+            if self.goal[0] == self.row-1 and self.goal[1] == 0:
                 print("Random Goal is the same as the original goal")
             self.reward_states[self.goal[0]][self.goal[1]] = 1
         if GoalCon:

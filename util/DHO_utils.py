@@ -22,16 +22,16 @@ class QnetToCell:
         self.row = len(self.V_states)
         self.col = len(self.V_states[0])
         
-    def FillGridByQnet(self, Qnet, env, GoalCon):
+    def FillGridByQnet(self, Qnet, env, GoalCon, device):
         for i in range(self.row):
             for j in range(self.col):
                 if GoalCon == False:
-                    torch_state = torch.tensor(np.array([i, j]), dtype=torch.float32, device='cuda')
+                    torch_state = torch.tensor(np.array([i, j]), dtype=torch.float32, device=device)
                 else:
                     state = np.array([i, j])
                     goal = env.goal
                     stateWithgoal = np.concatenate((state, goal))
-                    torch_state = torch.tensor(stateWithgoal, dtype=torch.float32, device='cuda')
+                    torch_state = torch.tensor(stateWithgoal, dtype=torch.float32, device=device)
                 
                 self.V_states[i][j] = Qnet(torch_state).max(0)[0].item()
                 self.Action[i][j] = Qnet(torch_state).max(0)[1].item()
