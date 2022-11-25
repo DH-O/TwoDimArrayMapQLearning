@@ -64,12 +64,17 @@ class TwoDimCoordinationMap(TwoDimArrayMap):
         
     def reset(self, GoalCon):
         self.state = np.array([0, 0])
+        self.goal = np.array([self.row - 1, 0])
+        
         self.reward_states[self.goal[0]][self.goal[1]] = 1
         if self.randomGoal == True:
             self.reward_states[self.goal[0]][self.goal[1]] = -1
-            self.goal = np.array([np.random.randint(self.row//3, self.row-1), np.random.randint(self.col//3, self.col-1)])
+            
+            self.goal = np.array([np.random.randint(self.row//3, self.row), np.random.randint(0, self.col)])
             while (self.maze[self.goal[0]][self.goal[1]] == 1):
-                self.goal = np.array([np.random.randint(5, self.row-1), np.random.randint(5, self.col-1)])
+                self.goal = np.array([np.random.randint(self.row//3, self.row), np.random.randint(0, self.col)])
+            if self.goal == np.array([self.row - 1,0]):
+                print("Random Goal is the same as the original goal")
             self.reward_states[self.goal[0]][self.goal[1]] = 1
         if GoalCon:
             self.state = np.concatenate((self.state, self.goal))
