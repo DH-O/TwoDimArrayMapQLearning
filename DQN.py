@@ -19,33 +19,35 @@ import torch.optim as optim
 
 from torch.utils.tensorboard import SummaryWriter
 
-RM_SIZE = 1000000
+RM_SIZE = 2000000
 BATCH_SIZE          = 256
-GAMMA               = 0.995
+GAMMA               = 0.998
 EPS_START           = 0.9
 EPS_END             = 0.05
 EPS_DECAY           = 500
 RANDOM_ACTION_PROB  = 0.1
-RANDOM_GOAL         = False
+RANDOM_GOAL         = True
 
-X_SIZE          = 10
-Y_SIZE          = 10
+X_SIZE          = 20
+Y_SIZE          = 20
 
 STATE_DIM       = 2
 GOAL_DIM        = 2        
 ACTION_DIM      = 4
 
-NUM_EPISODES    = 600
-TIME_LIMIT      = 200
-TEST_EPISODES = 100
+NUM_EPISODES    = 1200
+TIME_LIMIT      = 500
+TEST_EPISODES = 300
 
-TARGET_UPDATE   = 500
+TARGET_UPDATE   = 1000
 
 SAVE            = NUM_EPISODES//10
 
 # Goal conditioned RL? and other Global variables
 GOAL_CON = True
-TEST = False
+TEST = True
+TEST_CASE = 1
+INIT_GOAL = [0, Y_SIZE-1]
 
 steps_done = 0
 
@@ -60,7 +62,7 @@ device = torch.device(f'cuda:{args.gpu}' if torch.cuda.is_available() else 'cpu'
 now_day = datetime.datetime.now().strftime("%m-%d")
 now = datetime.datetime.now().strftime("%m-%d_%H:%M:%S")
 
-path = f'./results_DQN/results_DQN_{now_day}_{X_SIZE, Y_SIZE}_{GAMMA}_NE_{NUM_EPISODES}_TSL_{TIME_LIMIT}_{GOAL_CON}_{TARGET_UPDATE}_{RANDOM_ACTION_PROB}_{RANDOM_GOAL}_{RM_SIZE}/result_{now}'
+path = f'./results_DQN/results_DQN_{now_day}_{X_SIZE, Y_SIZE}_{GAMMA}_NE_{NUM_EPISODES}_TSL_{TIME_LIMIT}_{GOAL_CON}_{TARGET_UPDATE}_{RANDOM_ACTION_PROB}_{RANDOM_GOAL}_{INIT_GOAL}_{RM_SIZE}/result_{now}'
 writer = SummaryWriter(f'{path}/tensorboard_{now}')
 
 # networks
@@ -140,7 +142,7 @@ if __name__ == '__main__':
         env.randomGoal = RANDOM_GOAL
         TEST = False
         
-        state = env.reset(GOAL_CON)
+        state = env.reset(GOAL_CON, TEST_CASE)
         np.savetxt(f'{path}/SimpleMaze_Reward_table_reset.txt', env.reward_states, fmt='%d')
         
         state = torch.tensor(state, device=device, dtype=torch.float32)
@@ -173,11 +175,17 @@ if __name__ == '__main__':
             #### test ####
             env.randomGoal = False
             TEST = True
-            done_sum = 0
-            steps_sum = 0
+            test_case = TEST_CASE
+            done_sum_list = [0, 0, 0]
+            steps_sum_list = [0, 0, 0]
             
             for _ in range(TEST_EPISODES):
-                state = env.reset(GOAL_CON)
+                if (TEST_EPISODES//3 <= _ < TEST_EPISODES//3*2):
+                    test_case = 2
+                elif (TEST_EPISODES//3*2 <= _):
+                    test_case = 3
+                state = env.reset(GOAL_CON, test_case)
+                np.savetxt(f'{path}/SimpleMaze_Reward_table_reset.txt', env.reward_states, fmt='%d')
                 state = torch.tensor(state, device=device, dtype=torch.float32)
                 
                 for test_t in range(1, TIME_LIMIT+1):   # t가 1부터 1씩 증가
@@ -187,16 +195,16 @@ if __name__ == '__main__':
                     state = next_state
                     if done:
                         break
-                done_sum += int(done)
-                steps_sum += test_t
-                
-            writer.add_scalar('success_rate/test', done_sum/TEST_EPISODES, i_episode)
-            writer.add_scalar('steps_per_episode/test', steps_sum/TEST_EPISODES, i_episode)
-            if test_t != TIME_LIMIT:    
-                print(f"----Test episodes of {i_episode} is done with {steps_sum/TEST_EPISODES} steps")
+                done_sum_list[test_case-1] += int(done)
+                steps_sum_list[test_case-1] += test_t
+            
+            for i in range(3):
+                writer.add_scalar('success_rate/test_case'+str(i+1), done_sum_list[i]/(TEST_EPISODES//3), i_episode)
+                writer.add_scalar('steps_per_episode/test_case'+str(i+1), steps_sum_list[i]/(TEST_EPISODES//3), i_episode)    
+                if int(steps_sum_list[i]/(TEST_EPISODES//3)) != TIME_LIMIT:    
+                    print(f"----Test_{i+1} episodes of {i_episode} is done with {steps_sum_list[i]/(TEST_EPISODES//3)} steps")
+            
             V_table, Action_table = QnetToCell.FillGridByQnet(Q_net, env, GOAL_CON, device)
-            
-            
             if not os.path.isdir(path+'/V_table_test') or not os.path.isdir(path+'/Action_table_test'):
                     os.makedirs(path+'/V_table_test')
                     os.makedirs(path+'/Action_table_test')
@@ -205,18 +213,18 @@ if __name__ == '__main__':
             np.savetxt(f'{path}/V_table_test/V_table_test_{now}.txt', V_table, fmt='%.3f')
             np.savetxt(f'{path}/Action_table_test/Action_table_test_{now}.txt', Action_table, fmt='%d')
             
-            if i_episode % SAVE == 0:
-                V_table, Action_table = QnetToCell.FillGridByQnet(Q_net, env, GOAL_CON, device)
-                if t != TIME_LIMIT:    
-                    print(f"--------{i_episode} is saved with {t} steps. V_table and Action table")
-                
-                if not os.path.isdir(path+'/V_table_train') or not os.path.isdir(path+'/Action_table_train'):
-                    os.makedirs(path+'/V_table_train')
-                    os.makedirs(path+'/Action_table_train')
-                
-                now = datetime.datetime.now().strftime("%m-%d_%H:%M:%S")
-                np.savetxt(f'{path}/V_table_train/V_table_{i_episode}_{now}.txt', V_table, fmt='%.3f')
-                np.savetxt(f'{path}/Action_table_train/Action_table_{i_episode}_{now}.txt', Action_table, fmt='%d')    
+        if i_episode % SAVE == 0:
+            V_table, Action_table = QnetToCell.FillGridByQnet(Q_net, env, GOAL_CON, device)
+            if t != TIME_LIMIT:    
+                print(f"--------{i_episode} is saved with {t} steps. V_table and Action table")
+            
+            if not os.path.isdir(path+'/V_table_train') or not os.path.isdir(path+'/Action_table_train'):
+                os.makedirs(path+'/V_table_train')
+                os.makedirs(path+'/Action_table_train')
+            
+            now = datetime.datetime.now().strftime("%m-%d_%H:%M:%S")
+            np.savetxt(f'{path}/V_table_train/V_table_{i_episode}_{now}.txt', V_table, fmt='%.3f')
+            np.savetxt(f'{path}/Action_table_train/Action_table_{i_episode}_{now}.txt', Action_table, fmt='%d')    
 
     writer.close()
     print(f'{path} is done')

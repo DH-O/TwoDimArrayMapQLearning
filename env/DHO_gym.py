@@ -58,39 +58,33 @@ class TwoDimCoordinationMap(TwoDimArrayMap):
     def __init__(self, x_dim, y_dim, action_space_dim=4):
         super().__init__(x_dim, y_dim, action_space_dim)
         self.state = np.array([0, 0])
-        self.goal = np.array([self.row - 1, 0])
-        
+        self.init_goal = np.array([0, self.col-1])
         self.randomGoal = False
         
-    def reset(self, GoalCon):
+    def reset(self, GoalCon, test_case=1):
         self.state = np.array([0, 0])
-        self.goal = np.array([self.row - 1, 0])
-        
-        self.reward_states[self.goal[0]][self.goal[1]] = 1
         if self.randomGoal == True:
-            self.reward_states[self.goal[0]][self.goal[1]] = -1
-            
             self.goal = np.array([np.random.randint(0, self.row), np.random.randint(0, self.col)])
             while (self.maze[self.goal[0]][self.goal[1]] == 1):
                 self.goal = np.array([np.random.randint(0, self.row), np.random.randint(0, self.col)])
-            if self.goal[0] == self.row-1 and self.goal[1] == 0:
+            if self.goal[0] == self.init_goal[0] and self.goal[1] == self.init_goal[1]:
                 print("Random Goal is the same as the original goal")
             self.reward_states[self.goal[0]][self.goal[1]] = 1
+        else:
+            self.reward_states[self.goal[0]][self.goal[1]] = -1
+            self.goal = self.init_goal
+            if test_case == 2:
+                # self.goals.append(self.init_goal)
+                self.goal = np.array([self.row - 1, self.col - 1])
+            elif test_case == 3:
+                # self.goals.append(self.init_goal)
+                # self.goals.append(np.array([self.row - 1, self.col - 1]))
+                self.goal = np.array([self.row - 1, 0])
+
+            self.reward_states[self.goal[0]][self.goal[1]] = 1
+        
         if GoalCon:
             self.state = np.concatenate((self.state, self.goal))
-        
-        return self.state
-    
-    def resetWithSubgoal(self):
-        self.state = np.array([0, 0])
-        # subgoal 1
-        self.subgoal1 = np.array([0, self.col - 1])
-        self.reward_states[self.subgoal1[0]][self.subgoal1[1]] = 0
-        # subgoal 2
-        self.subgoal2 = np.array([self.row - 1, self.col - 1])
-        self.reward_states[self.subgoal2[0]][self.subgoal2[1]] = 1
-        # Goal
-        self.reward_states[self.goal[0]][self.goal[1]] = 2
         
         return self.state
     
@@ -111,10 +105,8 @@ class TwoDimCoordinationMap(TwoDimArrayMap):
         if (self.state[0] == self.goal[0]) and (self.state[1] == self.goal[1]):
             reward = 1
             done = True
-        # elif (self.state[0] == self.subgoal1[0]) and (self.state[1] == self.subgoal1[1]) or (self.state[0] == self.subgoal2[0]) and (self.state[1] == self.subgoal2[1]): 
-        #     reward = 0
-        #     done = False
         else:
             reward = -1
             done = False
+            
         return self.state, reward, done
