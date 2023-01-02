@@ -59,14 +59,13 @@ class TwoDimCoordinationMap(TwoDimArrayMap):
         super().__init__(x_dim, y_dim, action_space_dim)
         self.state = np.array([0, 0])
         self.goal = np.array([self.row - 1, 0])
-        
         self.randomGoal = False
         
     def reset(self, GoalCon):
         self.state = np.array([0, 0])
         self.goal = np.array([self.row - 1, 0])
-        
         self.reward_states[self.goal[0]][self.goal[1]] = 1
+        
         if self.randomGoal == True:
             self.reward_states[self.goal[0]][self.goal[1]] = -1
             
@@ -76,15 +75,22 @@ class TwoDimCoordinationMap(TwoDimArrayMap):
             if self.goal[0] == self.row-1 and self.goal[1] == 0:
                 print("Random Goal is the same as the original goal")
             self.reward_states[self.goal[0]][self.goal[1]] = 1
+        
         if GoalCon==1:
+            self.reward_states[self.goal[0]][self.goal[1]] = -1
             self.goal = np.array([0, self.col-1])
             self.state = np.concatenate((self.state, self.goal))
+            self.reward_states[self.goal[0]][self.goal[1]] = 1
         elif GoalCon==2:
+            self.reward_states[self.goal[0]][self.goal[1]] = -1
             self.goal = np.array([self.row-1, self.col-1])
             self.state = np.concatenate((self.state, self.goal))
+            self.reward_states[self.goal[0]][self.goal[1]] = 1
         elif GoalCon==3:
+            self.reward_states[self.goal[0]][self.goal[1]] = -1
             self.goal = np.array([self.row-1, 0])
             self.state = np.concatenate((self.state, self.goal))
+            self.reward_states[self.goal[0]][self.goal[1]] = 1
         return self.state
     
     def step(self, action):
@@ -104,9 +110,6 @@ class TwoDimCoordinationMap(TwoDimArrayMap):
         if (self.state[0] == self.goal[0]) and (self.state[1] == self.goal[1]):
             reward = 1
             done = True
-        # elif (self.state[0] == self.subgoal1[0]) and (self.state[1] == self.subgoal1[1]) or (self.state[0] == self.subgoal2[0]) and (self.state[1] == self.subgoal2[1]): 
-        #     reward = 0
-        #     done = False
         else:
             reward = -1
             done = False

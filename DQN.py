@@ -36,16 +36,19 @@ GOAL_DIM        = 2
 ACTION_DIM      = 4
 
 NUM_EPISODES    = 2100
-TIME_LIMIT      = 800
+TIME_LIMIT      = 800 # 800 * 2100 = 1,680,000, 1680000/4000 = 420
 TEST_EPISODES = 100
 
-TARGET_UPDATE   = 4000
+TARGET_UPDATE   = 2000
 
 SAVE            = NUM_EPISODES//10
 
-# Goal conditioned RL? and other Global variables
+### Goal conditioned RL? and other Global variables
 GOAL_CON = 3
 TEST = True
+
+### Curriculum learning?
+CURR_CON = False
 
 steps_done = 0
 
@@ -141,12 +144,15 @@ if __name__ == '__main__':
         env.randomGoal = RANDOM_GOAL
         TEST = False
         
-        if i_episode % (NUM_EPISODES//3) == 0:
-            state = env.reset(1)
-        elif i_episode % (NUM_EPISODES//3) == 1:
-            state = env.reset(2)
-        elif i_episode % (NUM_EPISODES//3) == 2:
-            state = env.reset(3)
+        if CURR_CON:
+            if i_episode < (NUM_EPISODES//3):
+                state = env.reset(1)
+            elif (NUM_EPISODES//3) <= i_episode < 2*(NUM_EPISODES//3):
+                state = env.reset(2)
+            elif (NUM_EPISODES//3)*2 < i_episode:
+                state = env.reset(3)
+        else:
+            state = env.reset(GOAL_CON)
         np.savetxt(f'{path}/SimpleMaze_Reward_table_reset.txt', env.reward_states, fmt='%d')
         
         state = torch.tensor(state, device=device, dtype=torch.float32)
@@ -176,40 +182,40 @@ if __name__ == '__main__':
             if t != TIME_LIMIT:    
                 print(f"episode of {i_episode} is done with {t} steps. It should be less than {X_SIZE*Y_SIZE}")
             
-            #### test ####
-            env.randomGoal = False
-            TEST = True
-            done_sum = 0
-            steps_sum = 0
+            # #### test ####
+            # env.randomGoal = False
+            # TEST = True
+            # done_sum = 0
+            # steps_sum = 0
             
-            for _ in range(TEST_EPISODES):
-                state = env.reset(GOAL_CON)
-                state = torch.tensor(state, device=device, dtype=torch.float32)
+            # for _ in range(TEST_EPISODES):
+            #     state = env.reset(GOAL_CON)
+            #     state = torch.tensor(state, device=device, dtype=torch.float32)
                 
-                for test_t in range(1, TIME_LIMIT+1):   # t가 1부터 1씩 증가
-                    action = select_action(state)
-                    next_state, _, done = env.step(action.item())  # action.item()은 action의 값
-                    next_state = torch.tensor(next_state, device=device, dtype=torch.float32)
-                    state = next_state
-                    if done:
-                        break
-                done_sum += int(done)
-                steps_sum += test_t
+            #     for test_t in range(1, TIME_LIMIT+1):   # t가 1부터 1씩 증가
+            #         action = select_action(state)
+            #         next_state, _, done = env.step(action.item())  # action.item()은 action의 값
+            #         next_state = torch.tensor(next_state, device=device, dtype=torch.float32)
+            #         state = next_state
+            #         if done:
+            #             break
+            #     done_sum += int(done)
+            #     steps_sum += test_t
                 
-            writer.add_scalar('success_rate/test', done_sum/TEST_EPISODES, i_episode)
-            writer.add_scalar('steps_per_episode/test', steps_sum/TEST_EPISODES, i_episode)
-            if test_t != TIME_LIMIT:    
-                print(f"----Test episodes of {i_episode} is done with {steps_sum/TEST_EPISODES} steps")
-            V_table, Action_table = QnetToCell.FillGridByQnet(Q_net, env, GOAL_CON, device)
+            # writer.add_scalar('success_rate/test', done_sum/TEST_EPISODES, i_episode)
+            # writer.add_scalar('steps_per_episode/test', steps_sum/TEST_EPISODES, i_episode)
+            # if test_t != TIME_LIMIT:    
+            #     print(f"----Test episodes of {i_episode} is done with {steps_sum/TEST_EPISODES} steps")
+            # V_table, Action_table = QnetToCell.FillGridByQnet(Q_net, env, GOAL_CON, device)
             
             
-            if not os.path.isdir(path+'/V_table_test') or not os.path.isdir(path+'/Action_table_test'):
-                    os.makedirs(path+'/V_table_test')
-                    os.makedirs(path+'/Action_table_test')
+            # if not os.path.isdir(path+'/V_table_test') or not os.path.isdir(path+'/Action_table_test'):
+            #         os.makedirs(path+'/V_table_test')
+            #         os.makedirs(path+'/Action_table_test')
             
-            now = datetime.datetime.now().strftime("%m-%d_%H:%M:%S")
-            np.savetxt(f'{path}/V_table_test/V_table_test_{now}.txt', V_table, fmt='%.3f')
-            np.savetxt(f'{path}/Action_table_test/Action_table_test_{now}.txt', Action_table, fmt='%d')
+            # now = datetime.datetime.now().strftime("%m-%d_%H:%M:%S")
+            # np.savetxt(f'{path}/V_table_test/V_table_test_{now}.txt', V_table, fmt='%.3f')
+            # np.savetxt(f'{path}/Action_table_test/Action_table_test_{now}.txt', Action_table, fmt='%d')
             
             if i_episode % SAVE == 0:
                 V_table, Action_table = QnetToCell.FillGridByQnet(Q_net, env, GOAL_CON, device)
