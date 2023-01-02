@@ -76,22 +76,15 @@ class TwoDimCoordinationMap(TwoDimArrayMap):
             if self.goal[0] == self.row-1 and self.goal[1] == 0:
                 print("Random Goal is the same as the original goal")
             self.reward_states[self.goal[0]][self.goal[1]] = 1
-        if GoalCon:
+        if GoalCon==1:
+            self.goal = np.array([0, self.col-1])
             self.state = np.concatenate((self.state, self.goal))
-        
-        return self.state
-    
-    def resetWithSubgoal(self):
-        self.state = np.array([0, 0])
-        # subgoal 1
-        self.subgoal1 = np.array([0, self.col - 1])
-        self.reward_states[self.subgoal1[0]][self.subgoal1[1]] = 0
-        # subgoal 2
-        self.subgoal2 = np.array([self.row - 1, self.col - 1])
-        self.reward_states[self.subgoal2[0]][self.subgoal2[1]] = 1
-        # Goal
-        self.reward_states[self.goal[0]][self.goal[1]] = 2
-        
+        elif GoalCon==2:
+            self.goal = np.array([self.row-1, self.col-1])
+            self.state = np.concatenate((self.state, self.goal))
+        elif GoalCon==3:
+            self.goal = np.array([self.row-1, 0])
+            self.state = np.concatenate((self.state, self.goal))
         return self.state
     
     def step(self, action):

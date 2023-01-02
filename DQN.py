@@ -28,27 +28,28 @@ EPS_DECAY           = 500
 RANDOM_ACTION_PROB  = 0.1
 RANDOM_GOAL         = False
 
-X_SIZE          = 10
-Y_SIZE          = 10
+X_SIZE          = 20
+Y_SIZE          = 20
 
 STATE_DIM       = 2
 GOAL_DIM        = 2        
 ACTION_DIM      = 4
 
-NUM_EPISODES    = 600
-TIME_LIMIT      = 200
+NUM_EPISODES    = 2100
+TIME_LIMIT      = 800
 TEST_EPISODES = 100
 
-TARGET_UPDATE   = 500
+TARGET_UPDATE   = 4000
 
 SAVE            = NUM_EPISODES//10
 
 # Goal conditioned RL? and other Global variables
-GOAL_CON = True
-TEST = False
+GOAL_CON = 3
+TEST = True
 
 steps_done = 0
 
+#### Argument parser
 parser = argparse.ArgumentParser(description='DQN')
 
 parser.add_argument('--gpu', type=str, default='0', help='GPU ID')
@@ -56,14 +57,14 @@ args = parser.parse_args()
 
 device = torch.device(f'cuda:{args.gpu}' if torch.cuda.is_available() else 'cpu')
 
-# logging
+#### logging
 now_day = datetime.datetime.now().strftime("%m-%d")
 now = datetime.datetime.now().strftime("%m-%d_%H:%M:%S")
 
 path = f'./results_DQN/results_DQN_{now_day}_{X_SIZE, Y_SIZE}_{GAMMA}_NE_{NUM_EPISODES}_TSL_{TIME_LIMIT}_{GOAL_CON}_{TARGET_UPDATE}_{RANDOM_ACTION_PROB}_{RANDOM_GOAL}_{RM_SIZE}/result_{now}'
 writer = SummaryWriter(f'{path}/tensorboard_{now}')
 
-# networks
+#### networks
 if GOAL_CON:
     Q_net = Networks.QNET((STATE_DIM + GOAL_DIM), ACTION_DIM).to(device)
     target_Q_net = Networks.QNET((STATE_DIM + GOAL_DIM), ACTION_DIM).to(device)
@@ -73,8 +74,8 @@ else:
 target_Q_net.load_state_dict(Q_net.state_dict())
 target_Q_net.eval()
 
-# optimizer
-optimizer = optim.RMSprop(Q_net.parameters())
+#### optimizer
+optimizer = optim.RMSprop(Q_net.parameters())   ## 여기 좀 수상하다. 
 memory = ReplayMemory(RM_SIZE)
 QnetToCell = DHO_utils.QnetToCell(X_SIZE, Y_SIZE)
 
@@ -140,7 +141,12 @@ if __name__ == '__main__':
         env.randomGoal = RANDOM_GOAL
         TEST = False
         
-        state = env.reset(GOAL_CON)
+        if i_episode % (NUM_EPISODES//3) == 0:
+            state = env.reset(1)
+        elif i_episode % (NUM_EPISODES//3) == 1:
+            state = env.reset(2)
+        elif i_episode % (NUM_EPISODES//3) == 2:
+            state = env.reset(3)
         np.savetxt(f'{path}/SimpleMaze_Reward_table_reset.txt', env.reward_states, fmt='%d')
         
         state = torch.tensor(state, device=device, dtype=torch.float32)
